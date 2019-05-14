@@ -1,65 +1,71 @@
 <?php 
-		require_once('functions/initialize.php');
-		
+require_once 'functions/initialize.php';
 
-    if(!empty($_GET)){
-      $res = $_GET['res'];
-      $subject_tareas1 = find_all_tareas();
-            $conttareas = mysqli_num_rows($subject_tareas1);
-      if ($res==1) {
-         $nombre = $_POST['nombre'];
-        if (!validate_campo($nombre)) {
-          insert_alumno($nombre,$conttareas); 
-        }else{
-        echo  "<script type=\"text/javascript\"> 
-  
-        alert('Necesita registrar un nombre'); 
-        </script>";
-        }
-      }else if($res==2){
 
-        $subject_set = find_all_subjects();
-       $result = mysqli_num_rows($subject_set);
-
-        insert_tarea();
-        if ($result != 0) {
-         $alumnos = find_all_subjects();
-         $noalumnos = mysqli_num_rows($alumnos);
-          $datos = mysqli_fetch_assoc($alumnos);
-          
-          $id = $datos['id'];
-          if ($datos['tareas'] == "") {
-            
-            insert_tareas_vacias($conttareas,$noalumnos);
-          }else{
-            $tareas = $datos['tareas'];
-            agregar_tarea_vacia($conttareas,$noalumnos);
-          }
-          
-          //si es diferente de 0 voy a agregar el array a la tabla de calificaciones en la columna tareas 
-          //con la cantidad de tareas que hay en la tabla tareas pero con atributos vacios
-        }
-      }else if($res==3){
-        delete_tareas();
-      }else if($res==4){
-        delete_alumnos();
+if (!empty($_GET['res'])){
+  $res = $_GET['res'];
+  $subject_tareas1 = find_all_tareas();
+  $conttareas = mysqli_num_rows($subject_tareas1);
+  switch ($res) {
+    case 1:
+      $nombre = $_POST['nombre'];
+      if (!validate_campo($nombre)) {
+        insert_alumno($nombre, $conttareas); 
+      } else {
+        echo '<script type="text/javascript">
+          alert("Necesita registrar un nombre"); 
+          </script>';
       }
-     
+      break;
+    case 2:
+      $subject_set = find_all_subjects();
+      $result = mysqli_num_rows($subject_set);
 
-    }
+      insert_tarea();
+      if ($result != 0) {
+        $alumnos = find_all_subjects();
+        $noalumnos = mysqli_num_rows($alumnos);
+        $datos = mysqli_fetch_assoc($alumnos);
+        
+        $id = $datos['id'];
+        if ($datos['tareas'] == "") {
+          
+          insert_tareas_vacias($conttareas,$noalumnos);
+        }else{
+          $tareas = $datos['tareas'];
+          agregar_tarea_vacia($conttareas,$noalumnos);
+        }
+        
+        //si es diferente de 0 voy a agregar el array a la tabla de calificaciones en la columna tareas 
+        //con la cantidad de tareas que hay en la tabla tareas pero con atributos vacios
+      }
+        break;
+    case 3:
+      delete_tareas();
+      break;
+    case 4:
+      delete_alumnos();
+      break;
+  }
+}
 
 
 
 ?>
 
 <?php
-  
-  $subject_set = find_all_subjects();
-  $subject_set2 = find_all_subjects();
+  // Obtenemos una única vez los registros de la tabla "calificacion"
+  $calificacion = find_all_subjects();
+  // Almacenamos todos los registros en $calificacion
+  $subject_set = mysqli_fetch_all($calificacion, MYSQLI_ASSOC);
+  // Liberamos los recursos asociados a la consulta
+  mysqli_free_result($calificacion);
+  // No repetimos la misma consulta, copiamos los datos (en realidad, no hace ni falta)
+  $subject_set2 = $subject_set;
   $subject_tareas1 = find_all_tareas();
   $conttareas = mysqli_num_rows($subject_tareas1);
 
-  $result = mysqli_num_rows($subject_set);
+  $result = count($subject_set);
 
 ?>
 <!DOCTYPE html>
@@ -88,18 +94,13 @@
  	<td><table  border="1" width="100%"> 
        <tr> 
 
-           
-         
-        <?php $hw = mysqli_fetch_assoc($subject_set2);  //$arraytar = $hw['tareas'];?>
-
-
           <?php if ($conttareas != 0) {   ?>
 
           <?php for ($i=1; $i <= $conttareas ; $i++) {
             $tareas = "T" . $i;
            ?>
-            <!--<th align="center"><a href="http://www.google.com"><?php echo $hw[1]; ?></a></th> -->
-            <th align="center"><a href="http://www.google.com"><?php echo $tareas?></a></th>
+            <!--<th align="center"><a href="http://www.google.com"><?= $hw[1]; ?></a></th> -->
+            <th align="center"><a href="http://www.google.com"><?= $tareas?></a></th>
 
 
          <?php } ?>
@@ -132,35 +133,23 @@
 
 
         
-        <?php for ($i=1; $i <=$result ; $i++) { ?>
-         
-        <?php $subject = mysqli_fetch_assoc($subject_set);  ?>
-
+        <?php foreach($subject_set as $i => $subject) { ?>
+          
       <tr>  
-      <td align="center"><?php echo $i ?></td>
-      <td><?php echo $subject['nombre'] ?></td>   
+      <td align="center"><?= $i ?></td>
+      <td><?= htmlspecialchars($subject['nombre']) ?></td>   
       <?php var_dump($subject) ?>  
       <!--calificaciones de cada alumno-->
       <td><table  border="1" width="100%"> 
        <tr> 
 
-           
-         
-        <?php $hw = mysqli_fetch_assoc($subject_set2);  //$arraytar = $hw['tareas'];?>
-
-
-          <?php if ($conttareas != 0) {   ?>
-
-          <?php for ($i=1; $i <= $conttareas ; $i++) {
-            $tareas = "T" . $i;
-           ?>
-            <!--<th align="center"><a href="http://www.google.com"><?php echo $hw[1]; ?></a></th> -->
-            <td align="center"><a href="http://www.google.com"><?php echo $tareas?></a></td>
-
-
+          <?php $tareas = json_decode($subject['tareas']);
+          if (count($tareas) > 0) {
+          foreach ($tareas as $tarea) { ?>
+            <td align="center"><a href="http://www.google.com"><?= htmlspecialchars($tarea) ?></a></td>
          <?php } ?>
 
-       <?php }else{  ?>
+       <?php } else {  ?>
         <td align="center"><a href="http://www.google.com">.</a></td>
       <?php } ?>
         
